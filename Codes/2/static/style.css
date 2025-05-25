@@ -1,0 +1,377 @@
+/* static/style.css */
+:root {
+    --bg-dark: #12121F; /* Fundo principal bem escuro */
+    --bg-card: #1E1E32; /* Fundo dos cards um pouco mais claro */
+    --bg-card-header: #2A2A45; /* Fundo para cabeçalhos de cards */
+    --accent-purple: #7F5AF0; /* Roxo vibrante para botões e destaques */
+    --accent-purple-hover: #9272f1;
+    --text-primary: #E0E0E0; /* Cinza claro para texto principal */
+    --text-secondary: #A0A0B0; /* Cinza médio para texto secundário */
+    --text-highlight: #FFFFFF; /* Branco para estatísticas e valores importantes */
+    --border-color: #2c2c4a; /* Cor sutil para bordas */
+    --font-family: 'Open Sans', sans-serif;
+    --drag-drop-border: #4a4a6a;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-family);
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    line-height: 1.6;
+    padding: 20px;
+}
+
+.app-container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Removido.app-header e.logo-title se não estiverem em uso no HTML */
+/* Removido.intro-section se não estiver em uso no HTML */
+
+.main-content {
+    display: flex;
+    gap: 20px; /* Espaço entre as colunas */
+    flex-wrap: wrap; /* Permite que as colunas quebrem em telas menores */
+}
+
+.left-column,
+.middle-column,
+.right-column {
+    display: flex;
+    flex-direction: column;
+    gap: 20px; /* Espaço entre os cards dentro de uma coluna */
+}
+
+.left-column {
+    flex: 1; /* Ajuste a proporção conforme necessário */
+    min-width: 300px; /* Largura mínima para evitar esmagamento */
+}
+
+.middle-column {
+    flex: 1.5; /* Coluna do meio um pouco maior */
+    min-width: 400px;
+}
+
+.right-column {
+    flex: 1;
+    min-width: 300px;
+}
+
+.card {
+    background-color: var(--bg-card);
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    display: flex; /* Adicionado para melhor controle interno */
+    flex-direction: column; /* Garante que o conteúdo flua verticalmente */
+}
+
+.card h3 {
+    font-size: 1.3em;
+    color: var(--text-highlight);
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+    display: flex; /* Para alinhar ícone e texto */
+    align-items: center;
+}
+.card h3.fas {
+    margin-right: 10px;
+    color: var(--accent-purple);
+}
+
+/* Coluna da Esquerda */
+.import-midi-file.drag-drop-area {
+    border: 2px dashed var(--drag-drop-border);
+    border-radius: 6px;
+    padding: 30px 20px;
+    text-align: center;
+    background-color: rgba(0,0,0,0.1); /* Fundo sutil */
+    transition: background-color 0.3s ease, border-color 0.3s ease; /* Transição suave */
+}
+
+.drag-drop-area.drop-icon {
+    font-size: 3em;
+    color: var(--accent-purple);
+    margin-bottom: 15px;
+}
+
+.drag-drop-area p {
+    margin-bottom: 10px;
+    color: var(--text-secondary);
+}
+.drag-drop-area.or-text {
+    margin: 15px 0;
+    font-weight: 600;
+}
+
+.browse-button,.generate-button {
+    background-color: var(--accent-purple);
+    color: var(--text-highlight);
+    border: none;
+    padding: 12px 25px;
+    border-radius: 6px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease, opacity 0.3s ease;
+    width: 100%;
+    display: flex; /* Para alinhar ícone e texto no botão */
+    align-items: center;
+    justify-content: center;
+}
+.browse-button:hover,.generate-button:hover {
+    background-color: var(--accent-purple-hover);
+}
+/* Estilo para botão desabilitado */
+.generate-button:disabled {
+    background-color: var(--border-color);
+    color: var(--text-secondary);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+.generate-button:disabled:hover {
+    background-color: var(--border-color); /* Mantém a cor desabilitada no hover */
+}
+
+.generate-button.fas { /* Ícone dentro do botão Gerar */
+    margin-right: 8px;
+}
+
+
+.drag-drop-area.supported-formats {
+    font-size: 0.85em;
+    color: var(--text-secondary);
+    margin-top: 15px;
+}
+
+.recent-uploads ul {
+    list-style: none;
+    max-height: 150px; /* Limita altura e adiciona scroll se necessário */
+    overflow-y: auto; /* Adiciona scroll vertical */
+    padding-right: 5px; /* Espaço para a barra de rolagem */
+}
+.recent-uploads li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 5px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.95em;
+}
+.recent-uploads li:last-child {
+    border-bottom: none;
+}
+.recent-uploads.icon-file {
+    color: var(--accent-purple);
+    margin-right: 10px;
+    flex-shrink: 0; /* Evita que o ícone encolha */
+}
+.recent-uploads.file-name {
+    flex-grow: 1;
+    color: var(--text-primary);
+    white-space: nowrap; /* Evita quebra de linha */
+    overflow: hidden; /* Esconde o excesso */
+    text-overflow: ellipsis; /* Adiciona "..." */
+    margin-right: 10px; /* Espaço antes do tempo */
+}
+.recent-uploads.file-time {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+    flex-shrink: 0; /* Evita que o tempo encolha */
+}
+
+/* Coluna do Meio */
+.stats-overview {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap; /* Permite quebrar linha em telas menores */
+    gap: 15px; /* Espaço entre itens */
+    margin-bottom: 25px;
+    padding: 15px 10px; /* Ajuste padding */
+    background-color: var(--bg-card-header); /* Destaque para a área de stats */
+    border-radius: 6px;
+}
+.stat-item {
+    text-align: center;
+    flex-basis: calc(33.333% - 10px); /* Tenta 3 por linha */
+    min-width: 80px; /* Largura mínima */
+}
+.stat-item.stat-value {
+    display: block;
+    font-size: 2em; /* Reduzido ligeiramente */
+    font-weight: 700;
+    color: var(--text-highlight);
+    line-height: 1.1; /* Ajuste para evitar sobreposição */
+}
+.stat-item.stat-label {
+    font-size: 0.85em; /* Reduzido ligeiramente */
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    margin-top: 4px;
+}
+
+.ai-analysis h4,.composition-stats h4 {
+    font-size: 1.1em;
+    color: var(--text-highlight);
+    margin-bottom: 10px;
+    margin-top: 20px;
+}
+.ai-analysis p {
+    font-size: 0.95em;
+    line-height: 1.7;
+    color: var(--text-secondary);
+}
+
+.composition-stats ul {
+    list-style: none;
+}
+.composition-stats li {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.95em;
+    padding: 8px 0;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+.composition-stats li:last-child {
+    border-bottom: none;
+}
+.composition-stats li span:first-child {
+    margin-right: 10px; /* Espaço entre label e valor */
+}
+.composition-stats li span:last-child {
+    color: var(--text-highlight);
+    font-weight: 600;
+    text-align: right; /* Alinha valor à direita */
+}
+
+/* Coluna da Direita - Geração IA (Novo) */
+.ai-generation.generation-intro {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+}
+
+#generationResultArea {
+    margin-top: 20px;
+    padding: 10px;
+    border-radius: 4px;
+    min-height: 40px; /* Altura mínima para feedback */
+}
+
+#generationResultArea p {
+    margin-bottom: 10px; /* Espaçamento para mensagens de status */
+    color: var(--text-secondary);
+}
+
+#generationResultArea.download-link {
+    display: inline-block; /* Para aplicar padding e margin */
+    margin-top: 5px;
+    padding: 10px 15px;
+    background-color: var(--accent-purple);
+    color: var(--text-highlight);
+    border-radius: 5px;
+    text-decoration: none;
+    transition: background-color 0.3s ease;
+    font-weight: 600;
+    border: 1px solid var(--accent-purple-hover);
+}
+
+#generationResultArea.download-link:hover {
+    background-color: var(--accent-purple-hover);
+}
+
+#generationResultArea.download-link i {
+    margin-right: 8px;
+}
+
+/* Estilo para mensagem de erro na área de geração */
+#generationResultArea.error-message {
+    color: #f8d7da; /* Texto vermelho claro */
+    background-color: rgba(220, 53, 69, 0.1); /* Fundo vermelho sutil */
+    border: 1px solid #dc3545;
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+/* Ícone de spinner */
+#generationResultArea.fa-spinner {
+     margin-left: 5px;
+     color: var(--accent-purple); /* Cor do spinner */
+}
+
+
+/* Estilo para a área de drag-drop quando um arquivo está sendo arrastado sobre ela */
+.drag-drop-area.drag-over {
+    border-color: var(--accent-purple);
+    background-color: rgba(127, 90, 240, 0.1); /* Um leve fundo roxo */
+}
+
+/* Estilos para a mensagem de status do upload */
+.upload-status-message {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    text-align: center;
+    /* display: none; Oculto por padrão, mostrado via JS */
+}
+
+.upload-status-message.info {
+    background-color: rgba(23, 162, 184, 0.2); /* Azul para informação/carregando com opacidade */
+    color: #bee5eb;
+    border: 1px solid #17a2b8;
+}
+
+.upload-status-message.success {
+    background-color: rgba(40, 167, 69, 0.2); /* Verde para sucesso com opacidade*/
+    color: #d4edda; /* Texto verde claro */
+    border: 1px solid #28a745;
+}
+
+.upload-status-message.error {
+    background-color: rgba(220, 53, 69, 0.2); /* Vermelho para erro com opacidade*/
+    color: #f8d7da; /* Texto vermelho claro */
+    border: 1px solid #dc3545;
+}
+
+
+/* Responsividade Básica */
+@media (max-width: 1024px) {
+    /*.main-content já tem flex-wrap: wrap */
+   .left-column,.middle-column,.right-column {
+        flex-basis: 100%; /* Faz cada coluna ocupar a largura total */
+        min-width: 0; /* Reseta min-width para empilhar corretamente */
+    }
+}
+
+@media (max-width: 768px) {
+    body {
+        padding: 15px;
+    }
+   .card h3 {
+        font-size: 1.1em;
+    }
+   .browse-button,.generate-button {
+        padding: 10px 20px;
+        font-size: 0.95em;
+    }
+   .stat-item {
+        flex-basis: calc(50% - 10px); /* Tenta 2 por linha */
+    }
+   .stat-item.stat-value {
+        font-size: 1.8em;
+    }
+   .stat-item.stat-label {
+        font-size: 0.8em;
+    }
+}

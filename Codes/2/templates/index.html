@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_data.logo_title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <main class="main-content">
+            <section class="left-column">
+                <div class="card import-midi-file">
+                    <h3><i class="fas fa-file-import"></i> Importar Arquivo MIDI</h3>
+                    <div id="dragDropArea" class="drag-drop-area">
+                        <i class="fas fa-cloud-upload-alt drop-icon"></i>
+                        <p>Arraste e solte seu arquivo MIDI aqui</p>
+                        <p class="or-text">ou</p>
+                        <input type="file" id="midiFileInput" accept=".mid,.midi,audio/midi,audio/x-midi" style="display: none;">
+                        <button class="browse-button" type="button" id="browseButtonTrigger">Procurar Arquivos</button>
+                        <p class="supported-formats">Formatos suportados:.mid,.midi</p>
+                    </div>
+                    <div id="uploadStatusMessage" class="upload-status-message" style="display: none;"></div>
+                </div>
+                <div class="card recent-uploads">
+                    <h3><i class="fas fa-history"></i> Uploads Recentes</h3>
+                    <ul id="recentUploadsList"></ul>
+                    <p id="noRecentUploads" style="display: none; text-align: center; color: var(--text-secondary); padding: 10px 0;">Nenhum upload recente.</p>
+                </div>
+            </section>
+
+            <section class="middle-column">
+                <div class="card analysis-results">
+                    <h3><i class="fas fa-chart-bar"></i> Resultados da Análise</h3>
+                    <div class="stats-overview">
+                        <div class="stat-item">
+                            <span class="stat-value" id="statBPMValue">{{ analysis_results.bpm }}</span>
+                            <span class="stat-label">BPM</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="statKeyValue">{{ analysis_results.key }}</span>
+                            <span class="stat-label">TOM</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="statBarsValue">{{ analysis_results.bars }}</span> <span class="stat-label">COMPASSOS</span>
+                        </div>
+                    </div>
+                    <div class="ai-analysis">
+                        <h4>Análise IA</h4>
+                        <p id="aiAnalysisText">{{ ai_analysis }}</p>
+                    </div>
+                    <div class="composition-stats">
+                        <h4>Estatísticas da Composição</h4>
+                        <ul id="compositionStatsList">
+                            <li><span>Extensão Melódica:</span> <span id="statMelodicRange">{{ composition_stats.melodic_range }}</span></li>
+                            <li><span>Complexidade Harmônica:</span> <span id="statChordComplexity">{{ composition_stats.chord_complexity }}</span></li>
+                            <li><span>Densidade Rítmica:</span> <span id="statRhythmicDensity">{{ composition_stats.rhythmic_density }}</span></li>
+                            <li><span>Estrutura Formal:</span> <span id="statFormStructure">{{ composition_stats.form_structure }}</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section class="right-column">
+                <div class="card ai-generation">
+                    <h3><i class="fas fa-magic"></i> Geração IA</h3>
+                    <p class="generation-intro" style="font-size: 0.9em; color: var(--text-secondary); margin-bottom: 20px;">
+                        Após analisar um arquivo MIDI, você pode gerar uma curta continuação melódica (aprox. 7-10s).
+                    </p>
+                    <button id="generateButton" class="generate-button" disabled>
+                        <i class="fas fa-play"></i> Gerar Continuação
+                    </button>
+                    <div id="generationResultArea" style="margin-top: 20px;">
+                        </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Elementos da UI ---
+            const dragDropArea = document.getElementById('dragDropArea');
+            const browseButtonTrigger = document.getElementById('browseButtonTrigger');
+            const midiFileInput = document.getElementById('midiFileInput');
+            const uploadStatusMessage = document.getElementById('uploadStatusMessage');
+            const recentUploadsList = document.getElementById('recentUploadsList');
+            const noRecentUploadsMessage = document.getElementById('noRecentUploads');
+        
+            // Elementos da UI de Análise
+            const statBPMValue = document.getElementById('statBPMValue');
+            const statKeyValue = document.getElementById('statKeyValue');
+            const statBarsValue = document.getElementById('statBarsValue');
+            const aiAnalysisText = document.getElementById('aiAnalysisText');
+            const statMelodicRange = document.getElementById('statMelodicRange');
+            const statChordComplexity = document.getElementById('statChordComplexity');
+            const statRhythmicDensity = document.getElementById('statRhythmicDensity');
+            const statFormStructure = document.getElementById('statFormStructure');
+        
+            // Elementos da UI de Geração (Novos)
+            const generateButton = document.getElementById('generateButton');
+            const generationResultArea = document.getElementById('generationResultArea');
+        
+            // --- Variáveis de Estado ---
+            const MAX_HISTORY_ITEMS = 3;
+            const LOCAL_STORAGE_KEY = 'midiUploadHistory';
+            let timeUpdateInterval;
+            let currentUploadedFilename = null; // Armazena o nome do arquivo *seguro* retornado pelo backend
+        
+            // --- Funções Auxiliares ---
+            function escapeHtml(unsafe) {
+                if (typeof unsafe !== 'string') return '';
+                return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+            }
+        
+            function displayUploadStatus(message, type) {
+                uploadStatusMessage.textContent = message;
+                uploadStatusMessage.className = `upload-status-message ${type}`;
+                uploadStatusMessage.style.display = 'block'; // Mostra a mensagem
+            }
+        
+            function hideUploadStatus() {
+                uploadStatusMessage.style.display = 'none';
+            }
+        
+            // --- Lógica de Geração (Nova) ---
+            function handleSuccessfulUpload(result) {
+                // Lógica de sucesso existente:
+                displayUploadStatus(`Sucesso! "${escapeHtml(result.original_filename)}" analisado.`, 'success');
+                addUploadToHistory(result.original_filename, new Date().toISOString()); // Usa nome original para histórico
+                updateUIWithAnalysis(result.analysis); // Atualiza painel de análise
+        
+                // Nova lógica para geração:
+                currentUploadedFilename = result.filename; // Armazena nome seguro para requisição de geração
+                if (generateButton) {
+                    generateButton.disabled = false; // Habilita o botão de geração
+                }
+                if (generationResultArea) {
+                    generationResultArea.innerHTML = '<p style="color: var(--text-secondary); font-style: italic;">Pronto para gerar continuação.</p>'; // Limpa resultados/erros anteriores
+                }
+                console.log("Pronto para gerar continuação para:", currentUploadedFilename);
+            }
+        
+            function handleUploadOrAnalysisErrorOrReset() {
+                // Lógica de reset existente pode estar em resetAnalysisUI()
+                // Garante que o estado de geração também seja resetado:
+                currentUploadedFilename = null;
+                if (generateButton) {
+                    generateButton.disabled = true;
+                }
+                if (generationResultArea) {
+                    generationResultArea.innerHTML = ''; // Limpa área de geração
+                }
+                // Não esconde a mensagem de status aqui, pois pode haver um erro a ser exibido
+                console.log("Estado de geração resetado.");
+            }
+        
+            // --- Lógica de Upload (Modificada) ---
+            async function uploadFile(file) {
+                const formData = new FormData();
+                formData.append('midi_file', file);
+        
+                // Reseta UI antes de iniciar upload
+                handleUploadOrAnalysisErrorOrReset(); // Reseta estado de geração
+                resetAnalysisUI(); // Reseta painel de análise
+                displayUploadStatus(`Enviando e validando: ${escapeHtml(file.name)}...`, 'info');
+        
+                try {
+                    const response = await fetch('/upload_midi', { method: 'POST', body: formData });
+                    const result = await response.json();
+        
+                    if (response.ok && result.status === 'success') {
+                        // *** CHAMA HANDLER DE SUCESSO ***
+                        handleSuccessfulUpload(result);
+                    } else {
+                        // CORRIGIDO: Usado || para fallback
+                        displayUploadStatus(`Erro: ${escapeHtml(result.message || 'Falha no upload ou análise.')}`, 'error');
+                        // *** Garante reset em caso de erro ***
+                        handleUploadOrAnalysisErrorOrReset(); // Reseta estado de geração
+                    }
+                } catch (error) {
+                    console.error('Erro no upload:', error);
+                    displayUploadStatus('Erro de conexão ao tentar enviar o arquivo.', 'error');
+                    // *** Garante reset em caso de erro ***
+                    handleUploadOrAnalysisErrorOrReset(); // Reseta estado de geração
+                }
+            }
+        
+            // --- Lógica de Análise UI (Modificada) ---
+            function resetAnalysisUI() {
+                // Reset dos elementos de análise
+                statBPMValue.textContent = '...';
+                statKeyValue.textContent = '...';
+                statBarsValue.textContent = '...';
+                aiAnalysisText.textContent = 'Importe um arquivo MIDI para ver a análise.';
+                statMelodicRange.textContent = '...';
+                statChordComplexity.textContent = '...';
+                statRhythmicDensity.textContent = '...';
+                statFormStructure.textContent = '...';
+        
+                // *** Garante que o estado de geração também seja resetado ***
+                handleUploadOrAnalysisErrorOrReset();
+                // Esconde a mensagem de status se estiver resetando a UI completamente
+                // hideUploadStatus(); // Comentado para permitir que erros de upload permaneçam visíveis
+            }
+        
+            function updateUIWithAnalysis(analysis) {
+                if (!analysis) {
+                    resetAnalysisUI();
+                    aiAnalysisText.textContent = "Não foi possível obter dados da análise.";
+                    return;
+                }
+                statBPMValue.textContent = analysis.bpm !== "N/A" ? analysis.bpm : '---';
+                statKeyValue.textContent = analysis.key !== "N/A" ? analysis.key : '---';
+                statBarsValue.textContent = analysis.num_bars !== "N/A" ? analysis.num_bars : '---'; // Corrigido para num_bars
+                // CORRIGIDO: Usado || para fallback
+                aiAnalysisText.textContent = analysis.ai_analysis_text || "Análise textual não disponível.";
+                statMelodicRange.textContent = analysis.melodic_range !== "N/A" ? analysis.melodic_range : '---';
+                statChordComplexity.textContent = analysis.chord_complexity !== "N/A" ? analysis.chord_complexity : '---';
+                statRhythmicDensity.textContent = analysis.rhythmic_density !== "N/A" ? analysis.rhythmic_density : '---';
+                statFormStructure.textContent = analysis.form_structure !== "N/A" ? analysis.form_structure : '---';
+            }
+        
+            // --- Event Listener do Botão Gerar (Novo) ---
+            if (generateButton) {
+                generateButton.addEventListener('click', async () => {
+                    if (!currentUploadedFilename) {
+                        generationResultArea.innerHTML = '<p class="error-message">Erro: Nenhum arquivo MIDI válido carregado para gerar continuação.</p>';
+                        return;
+                    }
+        
+                    generateButton.disabled = true; // Desabilita botão durante geração
+                    generationResultArea.innerHTML = '<p><i class="fas fa-spinner fa-spin"></i> Gerando continuação...</p>';
+        
+                    try {
+                        const response = await fetch('/generate_continuation', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            // Envia o nome do arquivo *seguro* que foi analisado
+                            body: JSON.stringify({
+                                filename: currentUploadedFilename
+                                // Opcionalmente, adicione outros parâmetros aqui
+                                // length_seconds: 8,
+                                // temperature: 0.6
+                            })
+                        });
+        
+                        const result = await response.json();
+        
+                        if (response.ok && result.status === 'success') {
+                            // Exibe link de download
+                            generationResultArea.innerHTML = `
+                                <p>Geração concluída!</p>
+                                <a href="${escapeHtml(result.midi_url)}" download="${escapeHtml(result.midi_filename)}" class="download-link" target="_blank">
+                                    <i class="fas fa-download"></i> Baixar Continuação (${escapeHtml(result.midi_filename)})
+                                </a>`;
+                            // Mantém o botão desabilitado após sucesso para evitar regerar imediatamente?
+                            // generateButton.disabled = false; // Ou reabilita
+                        } else {
+                            // Exibe mensagem de erro do backend
+                            // CORRIGIDO: Usado || para fallback
+                            generationResultArea.innerHTML = `<p class="error-message">Erro na geração: ${escapeHtml(result.message || 'Falha desconhecida do servidor.')}</p>`;
+                            // Verifica erros fatais (como modelo indisponível)
+                            if (result.message && result.message.includes("Modelo MusicVAE não está disponível")) {
+                                // Mantém botão desabilitado se o modelo estiver quebrado
+                            } else {
+                                generateButton.disabled = false; // Reabilita botão em erros não fatais
+                            }
+                        }
+        
+                    } catch (error) {
+                        console.error('Erro ao buscar geração:', error);
+                        generationResultArea.innerHTML = '<p class="error-message">Erro de comunicação com o servidor ao tentar gerar a continuação.</p>';
+                        generateButton.disabled = false; // Reabilita botão em erro de rede
+                    }
+                });
+            }
+        
+            // --- Lógica de Drag and Drop (Existente) ---
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dragDropArea.addEventListener(eventName, preventDefaults, false);
+                document.body.addEventListener(eventName, preventDefaults, false); // Evita que o navegador abra o arquivo
+            });
+            function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dragDropArea.addEventListener(eventName, () => dragDropArea.classList.add('drag-over'), false);
+            });
+            ['dragleave', 'drop'].forEach(eventName => {
+                dragDropArea.addEventListener(eventName, () => dragDropArea.classList.remove('drag-over'), false);
+            });
+            dragDropArea.addEventListener('drop', handleDrop, false);
+            function handleDrop(e) { handleFiles(e.dataTransfer.files); }
+            browseButtonTrigger.addEventListener('click', () => midiFileInput.click());
+            midiFileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+        
+            function handleFiles(files) {
+                if (files.length > 0) {
+                    const file = files[0]; // CORRIGIDO: Pega o primeiro arquivo da FileList
+                    const allowedExtensions = ['.mid', '.midi'];
+                    // Adicionado 'name' para evitar erro se file.name for undefined
+                    const fileName = file.name || ""; // CORRIGIDO
+                    const fileExtension = '.' + fileName.split('.').pop().toLowerCase();
+        
+                    // Validação de tipo MIME também
+                    if (!allowedExtensions.includes(fileExtension) && !['audio/midi', 'audio/x-midi'].includes(file.type)) {
+                        displayUploadStatus(`Formato inválido: ${escapeHtml(fileName)}. Use .mid ou .midi.`, 'error');
+                        handleUploadOrAnalysisErrorOrReset(); // Reseta estado de geração
+                        return;
+                    }
+                    // Chama uploadFile que agora lida com status e resets
+                    uploadFile(file);
+                }
+            }
+        
+            // --- Lógica do Histórico de Uploads (Existente, com correção) ---
+            function getHistory() {
+                const history = localStorage.getItem(LOCAL_STORAGE_KEY);
+                // CORRIGIDO: Usado : [] para retornar lista vazia em caso de falha
+                return history ? JSON.parse(history) : [];
+            }
+            function saveHistory(history) { localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(history));}
+            function addUploadToHistory(filename, timestamp) { let history = getHistory(); history.unshift({ filename, timestamp }); history = history.slice(0, MAX_HISTORY_ITEMS); saveHistory(history); renderHistory(); }
+            function renderHistory() {
+                const history = getHistory();
+                recentUploadsList.innerHTML = '';
+                if (history.length === 0) { noRecentUploadsMessage.style.display = 'block'; return; }
+                noRecentUploadsMessage.style.display = 'none';
+                history.forEach(item => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<i class="fas fa-music icon-file"></i> <span class="file-name">${escapeHtml(item.filename)}</span> <span class="file-time" data-timestamp="${item.timestamp}">${formatTimeAgo(item.timestamp)}</span>`;
+                    recentUploadsList.appendChild(li);
+                });
+                updateAllTimestampsDynamically();
+            }
+        
+            // --- Lógica de Atualização Dinâmica de Tempo (Existente) ---
+            function formatTimeAgo(isoTimestamp) {
+                if (!isoTimestamp) return '';
+                const date = new Date(isoTimestamp);
+                const now = new Date();
+                const seconds = Math.round((now.getTime() - date.getTime()) / 1000);
+                const minutes = Math.round(seconds / 60);
+                const hours = Math.round(minutes / 60);
+                const days = Math.round(hours / 24);
+        
+                if (seconds < 5) return "agora mesmo";
+                if (seconds < 60) return `há ${seconds} seg`;
+                if (minutes === 1) return "há 1 min";
+                if (minutes < 60) return `há ${minutes} min`;
+                if (hours === 1) return "há 1 hora";
+                if (hours < 24) return `há ${hours} horas`;
+                if (days === 1) return "Ontem";
+                // Para datas mais antigas, formato DD/MM/AA
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = String(date.getFullYear()).slice(-2);
+                return `em ${day}/${month}/${year}`;
+            }
+            function updateAllTimestampsDynamically() {
+                const timeElements = recentUploadsList.querySelectorAll('.file-time[data-timestamp]');
+                timeElements.forEach(el => {
+                    const timestamp = el.getAttribute('data-timestamp');
+                    el.textContent = formatTimeAgo(timestamp);
+                });
+                if (timeUpdateInterval) clearInterval(timeUpdateInterval);
+                if (timeElements.length > 0) {
+                    timeUpdateInterval = setInterval(() => {
+                        const currentVisibleTimeElements = recentUploadsList.querySelectorAll('.file-time[data-timestamp]');
+                        currentVisibleTimeElements.forEach(tel => {
+                            const ts = tel.getAttribute('data-timestamp');
+                            tel.textContent = formatTimeAgo(ts);
+                        });
+                        if (currentVisibleTimeElements.length === 0 && timeUpdateInterval) {
+                            clearInterval(timeUpdateInterval);
+                            timeUpdateInterval = null;
+                        }
+                    }, 30000); // Atualiza a cada 30 segundos
+                }
+            }
+        
+            // --- Inicialização ---
+            renderHistory();
+            resetAnalysisUI(); // Garante estado inicial limpo para análise e geração
+            hideUploadStatus(); // Garante que a mensagem de status esteja oculta no início
+        });
+        </script>
+</body>
+</html>
