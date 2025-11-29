@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_data.logo_title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/tone@14.7.77/build/Tone.js"></script>
+    <script src="https://unpkg.com/@tonejs/midi"></script>
+</head>
+<body>
+    <div class="app-container">
+        <main class="main-content">
+            <section class="left-column">
+                <div class="card import-midi-file">
+                    <h3><i class="fas fa-file-import"></i> Importar Arquivo MIDI</h3>
+                    <div id="dragDropArea" class="drag-drop-area">
+                        <i class="fas fa-cloud-upload-alt drop-icon"></i>
+                        <p>Arraste e solte seu arquivo MIDI aqui</p>
+                        <p class="or-text">ou</p>
+                        <input type="file" id="midiFileInput" accept=".mid,.midi,audio/midi,audio/x-midi" style="display: none;">
+                        <button class="browse-button" type="button" id="browseButtonTrigger">Procurar Arquivos</button>
+                        <p class="supported-formats">Formatos suportados: .mid, .midi</p>
+                    </div>
+                    <div id="uploadStatusMessage" class="upload-status-message"></div>
+                </div>
+                <div class="card recent-uploads">
+                    <h3><i class="fas fa-history"></i> Uploads Recentes</h3>
+                    <ul id="recentUploadsList"></ul>
+                    <p id="noRecentUploads" style="display: none; text-align: center; color: var(--text-secondary); padding: 10px 0;">Nenhum upload recente.</p>
+                </div>
+            </section>
+
+            <section class="middle-column">
+                <div class="card analysis-results">
+                    <h3><i class="fas fa-chart-bar"></i> Resultados da Análise</h3>
+                    <div class="stats-overview">
+                        <div class="stat-item">
+                            <span class="stat-value" id="statBPMValue">{{ analysis_results.bpm }}</span>
+                            <span class="stat-label">BPM</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="statKeyValue">{{ analysis_results.key }}</span>
+                            <span class="stat-label">TOM</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="statBarsValue">{{ analysis_results.bars }}</span>
+                            <span class="stat-label">COMPASSOS</span>
+                        </div>
+                    </div>
+                    <div class="ai-analysis">
+                        <h4>Análise IA</h4>
+                        <p id="aiAnalysisText">{{ ai_analysis }}</p>
+                    </div>
+                    <div class="composition-stats">
+                        <h4>Estatísticas da Composição</h4>
+                        <ul id="compositionStatsList">
+                            <li><span>Extensão Melódica:</span> <span id="statMelodicRange">{{ composition_stats[0].value }}</span></li>
+                            <li><span>Complexidade Harmônica:</span> <span id="statChordComplexity">{{ composition_stats[1].value }}</span></li>
+                            <li><span>Densidade Rítmica:</span> <span id="statRhythmicDensity">{{ composition_stats[2].value }}</span></li>
+                            <li><span>Estrutura Formal:</span> <span id="statFormStructure">{{ composition_stats[3].value }}</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section class="right-column">
+                <div class="card original-song-player">
+                    <h3><i class="fas fa-play-circle"></i> Música Original</h3>
+                    <div id="originalPlayerContainer">
+                        <p class="inspiration-placeholder">Faça o upload de um MIDI para ouvi-lo aqui.</p>
+                    </div>
+                </div>
+                <div class="card ai-inspiration">
+                    <h3><i class="fas fa-lightbulb"></i> Inspiração IA</h3>
+                    <p class="inspiration-intro">Com base na sua composição, nossa IA gerou uma sugestão para inspirar seus próximos passos.</p>
+                    
+                    <div id="inspirationContainer">
+                        <p id="inspirationPlaceholder" class="inspiration-placeholder">Faça o upload de um MIDI para gerar uma sugestão.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- SELETORES DO DOM (com adição do novo player) ---
+    const dragDropArea = document.getElementById('dragDropArea');
+    const browseButtonTrigger = document.getElementById('browseButtonTrigger');
+    const midiFileInput = document.getElementById('midiFileInput');
+    const uploadStatusMessage = document.getElementById('uploadStatusMessage');
+    const recentUploadsList = document.getElementById('recentUploadsList');
+    const noRecentUploadsMessage = document.getElementById('noRecentUploads');
+    const inspirationContainer = document.getElementById('inspirationContainer');
+    const originalPlayerContainer = document.getElementById('originalPlayerContainer'); // NOVO SELETOR
+    
+    // Seletores da área de Análise
+    const statBPMValue = document.getElementById('statBPMValue');
+    const statKeyValue = document.getElementById('statKeyValue');
+    const statBarsValue = document.getElementById('statBarsValue');
+    const aiAnalysisText = document.getElementById('aiAnalysisText');
+    const statMelodicRange = document.getElementById('statMelodicRange');
+    const statChordComplexity = document.getElementById('statChordComplexity');
+    const statRhythmicDensity = document.getElementById('statRhythmicDensity');
+    const statFormStructure = document.getElementById('statFormStructure');
+
+    // --- ESTADO DA APLICAÇÃO ---
+    const MAX_HISTORY_ITEMS = 3;
+    const LOCAL_STORAGE_KEY = 'midiUploadHistory';
+    let timeUpdateInterval;
+
+    // Estado do player de áudio
+    let synth;
+    let isPlaying = false;
+    let currentPlayingButton = null;
+    let originalMidiUrl = null; // NOVO: Guarda a URL do MIDI original
+
+
+    // --- LÓGICA DE DRAG & DROP E UPLOAD ---
+
+    // ... (As funções de drag & drop, handleDrop, etc., permanecem as mesmas)
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dragDropArea.addEventListener(eventName, preventDefaults, false);
+        document.body.addEventListener(eventName, preventDefaults, false);
+    });
+    function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dragDropArea.addEventListener(eventName, () => dragDropArea.classList.add('drag-over'), false);
+    });
+    ['dragleave', 'drop'].forEach(eventName => {
+        dragDropArea.addEventListener(eventName, () => dragDropArea.classList.remove('drag-over'), false);
+    });
+    dragDropArea.addEventListener('drop', handleDrop, false);
+    function handleDrop(e) { handleFiles(e.dataTransfer.files); }
+    browseButtonTrigger.addEventListener('click', () => midiFileInput.click());
+    midiFileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+
+    function handleFiles(files) {
+        if (files.length > 0) {
+            const file = files[0];
+            const allowedExtensions = ['.mid', '.midi'];
+            const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+            if (!allowedExtensions.includes(fileExtension) && !['audio/midi', 'audio/x-midi'].includes(file.type)) {
+                displayUploadStatus(`Formato inválido: ${file.name}. Use .mid ou .midi.`, 'error');
+                return;
+            }
+            displayUploadStatus(`Analisando: ${file.name}...`, 'info');
+            resetAnalysisUI();
+            uploadFile(file);
+        }
+    }
+
+    async function uploadFile(file) {
+        // --- ATUALIZADO: Lógica para criar URL local para o player original ---
+        if (originalMidiUrl) {
+            URL.revokeObjectURL(originalMidiUrl); // Limpa a URL anterior
+        }
+        originalMidiUrl = URL.createObjectURL(file); // Cria uma nova URL temporária
+        updateOriginalPlayerUI(originalMidiUrl, file.name); // Atualiza o player original
+        // --- Fim da atualização ---
+
+        const formData = new FormData();
+        formData.append('midi_file', file);
+        
+        showInspirationLoading();
+
+        try {
+            const response = await fetch('/upload_midi', { method: 'POST', body: formData });
+            const result = await response.json();
+
+            if (response.ok && result.status === 'success') {
+                displayUploadStatus(`Sucesso! "${result.filename}" analisado.`, 'success');
+                addUploadToHistory(result.filename, new Date().toISOString());
+                updateUIWithAnalysis(result.analysis);
+                updateInspirationUI(result);
+            } else {
+                displayUploadStatus(`Erro: ${result.message || 'Falha no upload ou análise.'}`, 'error');
+                resetAnalysisUI();
+            }
+        } catch (error) {
+            console.error('Erro no upload:', error);
+            displayUploadStatus('Erro de conexão ao tentar enviar o arquivo.', 'error');
+            resetAnalysisUI();
+        }
+    }
+
+    // --- FUNÇÕES DE ATUALIZAÇÃO DA INTERFACE ---
+
+    function displayUploadStatus(message, type) {
+        uploadStatusMessage.textContent = message;
+        uploadStatusMessage.className = `upload-status-message ${type}`;
+    }
+
+    function resetAnalysisUI() {
+        statBPMValue.textContent = '...';
+        statKeyValue.textContent = '...';
+        statBarsValue.textContent = '...';
+        aiAnalysisText.textContent = 'Importe um arquivo MIDI para ver a análise.';
+        statMelodicRange.textContent = '...';
+        statChordComplexity.textContent = '...';
+        statRhythmicDensity.textContent = '...';
+        statFormStructure.textContent = '...';
+        resetInspirationUI();
+        resetOriginalPlayerUI(); // NOVO: Reseta também o player original
+    }
+    
+    function updateUIWithAnalysis(analysis) {
+        if (!analysis) {
+            resetAnalysisUI();
+            aiAnalysisText.textContent = "Não foi possível obter dados da análise.";
+            return;
+        }
+        statBPMValue.textContent = analysis.bpm !== "N/A" ? analysis.bpm : '---';
+        statKeyValue.textContent = analysis.key !== "N/A" ? analysis.key : '---';
+        statBarsValue.textContent = analysis.num_bars !== "N/A" ? analysis.num_bars : '---';
+        aiAnalysisText.textContent = analysis.ai_analysis_text || "Análise textual não disponível.";
+        statMelodicRange.textContent = analysis.melodic_range !== "N/A" ? analysis.melodic_range : '---';
+        statChordComplexity.textContent = analysis.chord_complexity !== "N/A" ? analysis.chord_complexity : '---';
+        statRhythmicDensity.textContent = analysis.rhythmic_density !== "N/A" ? analysis.rhythmic_density : '---';
+        statFormStructure.textContent = analysis.form_structure !== "N/A" ? analysis.form_structure : '---';
+    }
+
+    function showInspirationLoading() {
+        inspirationContainer.innerHTML = `
+            <div class="inspiration-loading">
+                <div class="loader"></div>
+                <p>IA está compondo a sugestão...</p>
+            </div>
+        `;
+    }
+
+    // --- ATUALIZAÇÃO NAS FUNÇÕES DE UI DOS PLAYERS ---
+
+    function resetInspirationUI() {
+        stopAndClean();
+        inspirationContainer.innerHTML = '<p class="inspiration-placeholder">Faça o upload de um MIDI para gerar uma sugestão.</p>';
+    }
+
+    function resetOriginalPlayerUI() {
+        stopAndClean();
+        originalPlayerContainer.innerHTML = '<p class="inspiration-placeholder">Faça o upload de um MIDI para ouvi-lo aqui.</p>';
+    }
+
+    // NOVO: Função para criar a UI do player original
+    function updateOriginalPlayerUI(midiUrl, filename) {
+        stopAndClean();
+        originalPlayerContainer.innerHTML = `
+            <div class="inspiration-item">
+                <h5 style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(filename)}">${escapeHtml(filename)}</h5>
+                <div class="melody-controls">
+                    <button class="control-btn play-btn" data-midi-url="${midiUrl}" aria-label="Play/Stop">
+                        <i class="fas fa-play"></i>
+                    </button>
+                    <a href="${midiUrl}" download="${escapeHtml(filename)}" class="control-btn download-btn" aria-label="Download">
+                        <i class="fas fa-download"></i>
+                    </a>
+                </div>
+            </div>
+        `;
+        originalPlayerContainer.querySelector('.play-btn').addEventListener('click', toggleMidiPlayback);
+    }
+
+    function updateInspirationUI(result) {
+        stopAndClean();
+        if (result && result.generated_midi_url) {
+            const midiUrl = result.generated_midi_url;
+            inspirationContainer.innerHTML = `
+                <div class="inspiration-item">
+                    <h5>Sugestão de Continuação</h5>
+                    <div class="melody-controls">
+                        <button class="control-btn play-btn" data-midi-url="${midiUrl}" aria-label="Play/Stop">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <a href="${midiUrl}" download="sugestao_ia.mid" class="control-btn download-btn" aria-label="Download">
+                            <i class="fas fa-download"></i>
+                        </a>
+                    </div>
+                </div>
+            `;
+            inspirationContainer.querySelector('.play-btn').addEventListener('click', toggleMidiPlayback);
+        } else {
+            inspirationContainer.innerHTML = '<p class="inspiration-placeholder">Não foi possível gerar uma sugestão desta vez.</p>';
+        }
+    }
+
+
+    // --- FUNÇÕES DO PLAYER DE ÁUDIO (GENÉRICAS) ---
+
+    function stopAndClean() {
+        if (isPlaying) {
+            Tone.Transport.stop();
+        }
+        Tone.Transport.cancel();
+
+        if (synth) {
+            synth.dispose();
+            synth = null;
+        }
+        isPlaying = false;
+        if (currentPlayingButton) {
+            const icon = currentPlayingButton.querySelector('i');
+            icon.classList.remove('fa-stop', 'fa-spinner', 'fa-spin');
+            icon.classList.add('fa-play');
+            currentPlayingButton.disabled = false;
+            currentPlayingButton = null;
+        }
+    }
+    
+    async function toggleMidiPlayback(event) {
+        const button = event.currentTarget;
+        const icon = button.querySelector('i');
+        const midiUrl = button.dataset.midiUrl;
+
+        if (isPlaying && currentPlayingButton === button) {
+            stopAndClean();
+            return;
+        }
+
+        if (isPlaying) {
+            stopAndClean();
+        }
+
+        await Tone.start();
+
+        currentPlayingButton = button;
+        button.disabled = true;
+        icon.classList.remove('fa-play');
+        icon.classList.add('fa-spinner', 'fa-spin');
+
+        try {
+            const midi = await Midi.fromUrl(midiUrl);
+            synth = new Tone.PolySynth(Tone.Synth).toDestination();
+
+            midi.tracks.forEach(track => {
+                track.notes.forEach(note => {
+                    Tone.Transport.schedule(time => {
+                        synth.triggerAttackRelease(note.name, note.duration, time, note.velocity);
+                    }, note.time);
+                });
+            });
+
+            Tone.Transport.schedule(time => {
+                stopAndClean();
+            }, midi.duration);
+
+            Tone.Transport.start();
+            isPlaying = true;
+            
+            icon.classList.remove('fa-spinner', 'fa-spin');
+            icon.classList.add('fa-stop');
+            button.disabled = false;
+
+        } catch (error) {
+            console.error("Erro ao carregar ou tocar o MIDI:", error);
+            stopAndClean();
+        }
+    }
+
+    // --- FUNÇÕES DE HISTÓRICO ---
+
+    function getHistory() { const history = localStorage.getItem(LOCAL_STORAGE_KEY); return history ? JSON.parse(history) : [];}
+    function saveHistory(history) { localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(history));}
+    function addUploadToHistory(filename, timestamp) { let history = getHistory(); history.unshift({ filename, timestamp }); history = history.slice(0, MAX_HISTORY_ITEMS); saveHistory(history); renderHistory(); }
+    
+    function renderHistory() {
+        const history = getHistory();
+        recentUploadsList.innerHTML = ''; 
+        if (history.length === 0) { noRecentUploadsMessage.style.display = 'block'; return; }
+        noRecentUploadsMessage.style.display = 'none';
+        history.forEach(item => {
+            const li = document.createElement('li');
+            li.innerHTML = `<i class="fas fa-music icon-file"></i> <span class="file-name">${escapeHtml(item.filename)}</span> <span class="file-time" data-timestamp="${item.timestamp}">${formatTimeAgo(item.timestamp)}</span>`;
+            recentUploadsList.appendChild(li);
+        });
+        updateAllTimestampsDynamically();
+    }
+
+    function escapeHtml(unsafe) { if (typeof unsafe !== 'string') return ''; return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");}
+
+    function formatTimeAgo(isoTimestamp) {
+        if (!isoTimestamp) return '';
+        const date = new Date(isoTimestamp);
+        const now = new Date();
+        const seconds = Math.round((now.getTime() - date.getTime()) / 1000);
+        const minutes = Math.round(seconds / 60);
+        const hours = Math.round(minutes / 60);
+        const days = Math.round(hours / 24);
+
+        if (seconds < 5) return "agora mesmo";
+        if (seconds < 60) return `há ${seconds} seg`;
+        if (minutes === 1) return "há 1 min";
+        if (minutes < 60) return `há ${minutes} min`;
+        if (hours === 1) return "há 1 hora";
+        if (hours < 24) return `há ${hours} horas`;
+        if (days === 1) return "ontem";
+        if (days < 7) return `há ${days} dias`;
+        
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        return `em ${day}/${month}`;
+    }
+
+    function updateAllTimestampsDynamically() {
+        if (timeUpdateInterval) clearInterval(timeUpdateInterval);
+        
+        const timeElements = recentUploadsList.querySelectorAll('.file-time[data-timestamp]');
+        if (timeElements.length > 0) {
+            timeUpdateInterval = setInterval(() => {
+                const currentVisibleTimeElements = recentUploadsList.querySelectorAll('.file-time[data-timestamp]');
+                currentVisibleTimeElements.forEach(tel => {
+                     const ts = tel.getAttribute('data-timestamp');
+                     tel.textContent = formatTimeAgo(ts);
+                });
+                 if (currentVisibleTimeElements.length === 0) {
+                    clearInterval(timeUpdateInterval);
+                    timeUpdateInterval = null;
+                }
+            }, 30000); 
+        }
+    }
+
+    // --- INICIALIZAÇÃO DA PÁGINA ---
+    renderHistory();
+    resetAnalysisUI();
+});
+</script>
+</body>
+</html>

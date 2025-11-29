@@ -1,0 +1,419 @@
+:root {
+    --bg-dark: #12121F;
+    --bg-card: #1E1E32;
+    --bg-card-header: #2A2A45;
+    --accent-purple: #7F5AF0;
+    --accent-purple-hover: #9272f1;
+    --text-primary: #E0E0E0;
+    --text-secondary: #A0A0B0;
+    --text-highlight: #FFFFFF;
+    --border-color: #2c2c4a;
+    --font-family: 'Open Sans', sans-serif;
+    --drag-drop-border: #4a4a6a;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-family);
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    line-height: 1.6;
+    padding: 20px;
+}
+
+.app-container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.app-header {
+    margin-bottom: 20px;
+}
+
+.logo-title {
+    font-size: 1.2em;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.logo-title .fas {
+    margin-right: 8px;
+    color: var(--accent-purple);
+}
+
+.intro-section {
+    margin-bottom: 30px;
+    padding-left: 10px;
+}
+
+.intro-section h1 {
+    font-size: 2.2em;
+    color: var(--text-highlight);
+    margin-bottom: 8px;
+}
+
+.intro-section p {
+    font-size: 1em;
+    color: var(--text-secondary);
+    max-width: 600px;
+}
+
+.main-content {
+    display: flex;
+    gap: 20px;
+}
+
+.left-column,
+.middle-column,
+.right-column {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.left-column {
+    flex: 1;
+}
+
+.middle-column {
+    flex: 1.5;
+}
+
+.right-column {
+    flex: 1;
+}
+
+.card {
+    background-color: var(--bg-card);
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px solid var(--border-color);
+}
+
+.card h3 {
+    font-size: 1.3em;
+    color: var(--text-highlight);
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+}
+.card h3 .fas {
+    margin-right: 10px;
+    color: var(--accent-purple);
+}
+
+.import-midi-file .drag-drop-area {
+    border: 2px dashed var(--drag-drop-border);
+    border-radius: 6px;
+    padding: 30px 20px;
+    text-align: center;
+    background-color: rgba(0,0,0,0.1);
+}
+
+.drag-drop-area .drop-icon {
+    font-size: 3em;
+    color: var(--accent-purple);
+    margin-bottom: 15px;
+}
+
+.drag-drop-area p {
+    margin-bottom: 10px;
+    color: var(--text-secondary);
+}
+.drag-drop-area .or-text {
+    margin: 15px 0;
+    font-weight: 600;
+}
+
+.browse-button, .generate-button {
+    background-color: var(--accent-purple);
+    color: var(--text-highlight);
+    border: none;
+    padding: 12px 25px;
+    border-radius: 6px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    width: 100%;
+}
+.browse-button:hover, .generate-button:hover {
+    background-color: var(--accent-purple-hover);
+}
+
+.drag-drop-area .supported-formats {
+    font-size: 0.85em;
+    color: var(--text-secondary);
+    margin-top: 15px;
+}
+
+.recent-uploads ul {
+    list-style: none;
+}
+.recent-uploads li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 5px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.95em;
+}
+.recent-uploads li:last-child {
+    border-bottom: none;
+}
+.recent-uploads .icon-file {
+    color: var(--accent-purple);
+    margin-right: 10px;
+}
+.recent-uploads .file-name {
+    flex-grow: 1;
+    color: var(--text-primary);
+}
+.recent-uploads .file-time {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+}
+
+.stats-overview {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 25px;
+    padding: 15px 0;
+    background-color: var(--bg-card-header);
+    border-radius: 6px;
+}
+.stat-item {
+    text-align: center;
+}
+.stat-item .stat-value {
+    display: block;
+    font-size: 2.2em;
+    font-weight: 700;
+    color: var(--text-highlight);
+}
+.stat-item .stat-label {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+.ai-analysis h4, .composition-stats h4 {
+    font-size: 1.1em;
+    color: var(--text-highlight);
+    margin-bottom: 10px;
+    margin-top: 20px;
+}
+.ai-analysis p {
+    font-size: 0.95em;
+    line-height: 1.7;
+    color: var(--text-secondary);
+}
+
+.composition-stats ul {
+    list-style: none;
+}
+.composition-stats li {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.95em;
+    padding: 8px 0;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+.composition-stats li:last-child {
+    border-bottom: none;
+}
+.composition-stats li span:last-child {
+    color: var(--text-highlight);
+    font-weight: 600;
+}
+
+.ai-inspiration .inspiration-intro {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+}
+
+.inspiration-item {
+    background-color: var(--bg-card-header);
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.inspiration-item h5 {
+    font-size: 1em;
+    color: var(--text-primary);
+    flex-basis: 150px;
+    flex-shrink: 0;
+    margin-right: 10px;
+}
+
+.melody-visualizer {
+    flex-grow: 1;
+    height: 30px;
+    margin: 0 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.melody-visualizer .melody-bar {
+    height: 8px;
+    border-radius: 4px;
+    opacity: 0.7;
+}
+
+.melody-controls {
+    display: flex;
+    gap: 8px;
+}
+.melody-controls .control-btn {
+    background-color: var(--border-color);
+    color: var(--text-primary);
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 0.9em;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s ease;
+}
+.melody-controls .control-btn:hover {
+    background-color: var(--accent-purple);
+    color: var(--text-highlight);
+}
+.generate-button {
+    margin-top: 10px;
+}
+.generate-button .fas {
+    margin-right: 8px;
+}
+
+@media (max-width: 1024px) {
+    .main-content {
+        flex-direction: column;
+    }
+    .left-column, .middle-column, .right-column {
+        flex: 1;
+    }
+    .stats-overview {
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    .stat-item {
+        flex-basis: calc(33.333% - 10px);
+    }
+    .inspiration-item h5 {
+        margin-bottom: 10px;
+    }
+}
+
+@media (max-width: 768px) {
+    body {
+        padding: 15px;
+    }
+    .intro-section h1 {
+        font-size: 1.8em;
+    }
+    .card h3 {
+        font-size: 1.1em;
+    }
+    .browse-button, .generate-button {
+        padding: 10px 20px;
+        font-size: 0.95em;
+    }
+    .inspiration-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .melody-visualizer {
+        width: 100%;
+        margin: 10px 0;
+    }
+    .inspiration-item h5 {
+         flex-basis: auto;
+         width: 100%;
+    }
+}
+
+.drag-drop-area.drag-over {
+    border-color: var(--accent-purple);
+    background-color: rgba(127, 90, 240, 0.1);
+}
+
+.upload-status-message {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    text-align: center;
+}
+
+.upload-status-message.info {
+    background-color: #17a2b833;
+    color: #bee5eb;
+    border: 1px solid #17a2b8;
+}
+
+.upload-status-message.success {
+    background-color: #28a74533;
+    color: #d4edda;
+    border: 1px solid #28a745;
+}
+
+.upload-status-message.error {
+    background-color: #dc354533;
+    color: #f8d7da;
+    border: 1px solid #dc3545;
+}
+
+.inspiration-placeholder {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 20px 0;
+    font-style: italic;
+}
+
+.inspiration-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 0;
+    gap: 15px;
+    color: var(--text-secondary);
+}
+
+.loader {
+    border: 4px solid var(--border-color);
+    border-top: 4px solid var(--accent-purple);
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.melody-controls .download-btn {
+    text-decoration: none; /* Remove sublinhado do link */
+}
+
+.melody-controls .control-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: var(--border-color);
+}
